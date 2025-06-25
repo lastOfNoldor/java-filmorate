@@ -292,7 +292,7 @@ class UserControllerTest {
                   "birthday": "1995-01-01"
                 }
                 """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedFirstUser1)).andExpect(status().isBadRequest());
+        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedFirstUser2)).andExpect(status().isBadRequest());
     }
 
 }
