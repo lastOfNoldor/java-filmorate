@@ -11,7 +11,7 @@ import ru.yandex.practicum.filmorate.controller.UserController;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-
+// CHECKSTYLE:OFF
 @WebMvcTest(UserController.class)
 class UserControllerTest {
     private final String validTestUser = """
@@ -133,17 +133,6 @@ class UserControllerTest {
                 """;
         createInvalidUser(wrongBirthDateUser);
     }
-
-    /**
-     * апдейт без айди         ++++
-     * апдейт пользователя которого нет +++
-     * апдейт с невалидными значенииями +++
-     * апдейт с отсутвием не основных полей +++
-     * полностью успешный апдейт            ++
-     * успешная смена лдогина и почты       ++
-     * дупликат при смене
-     * полностью пустой стринг              ++
-     */
 
     @Test
     void postInvalidRequests() throws Exception {
@@ -296,3 +285,5 @@ class UserControllerTest {
     }
 
 }
+
+// CHECKSTYLE:ON

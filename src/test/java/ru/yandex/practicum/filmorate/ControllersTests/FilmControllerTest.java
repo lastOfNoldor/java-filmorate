@@ -11,6 +11,7 @@ import ru.yandex.practicum.filmorate.controller.FilmController;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+// CHECKSTYLE:OFF
 @WebMvcTest(FilmController.class)
 public class FilmControllerTest {
     private final String validTestFilm = """
@@ -268,4 +269,7 @@ public class FilmControllerTest {
         mockMvc.perform(get("/films")).andExpect(jsonPath("$[0].name").value("Ironweed2")).andExpect(jsonPath("$[0].duration").value(15000));
 
     }
+
 }
+
+// CHECKSTYLE:ON
