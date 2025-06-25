@@ -11,16 +11,19 @@ import ru.yandex.practicum.filmorate.model.Film;
 
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/films")
 public class FilmController {
-    private final Map <Long, Film> films = new HashMap<>();
+    private final Map<Long, Film> films = new HashMap<>();
     private static final Logger logger = (Logger) LoggerFactory.getLogger(FilmController.class);
 
     @GetMapping
-    public Collection<Film> findAll(){
+    public Collection<Film> findAll() {
         return films.values();
     }
 
@@ -60,7 +63,7 @@ public class FilmController {
                 Optional.ofNullable(newFilm.getReleaseDate()).ifPresent(oldFilm::setReleaseDate);
                 Optional.ofNullable(newFilm.getDuration()).ifPresent(oldFilm::setDuration);
                 logger.info("Данные фильма успешно обновлены. ID: {}", newFilm.getId());
-                films.put(oldFilm.getId(),oldFilm);
+                films.put(oldFilm.getId(), oldFilm);
                 return oldFilm;
             }
             logger.error("Не найден фильм для обновления, ID: {}", newFilm.getId());
@@ -84,7 +87,7 @@ public class FilmController {
                 throw new ValidationException("Слишком длинное описание фильма.");
             }
         }
-        if(film.getReleaseDate() != null) {
+        if (film.getReleaseDate() != null) {
             if (film.getReleaseDate().isBefore(LocalDate.of(1895, Month.DECEMBER, 28))) {
                 logger.warn("Дата фильма меньше допустимого значения: {}", film.getReleaseDate());
                 throw new ValidationException("Недопустимая дата фильма");
