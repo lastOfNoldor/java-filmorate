@@ -8,7 +8,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import ru.yandex.practicum.filmorate.controller.UserController;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -16,26 +15,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(UserController.class)
 class UserControllerTest {
     private final String validTestUser = """
-    {
-      "login": "properlogin",
-      "email": "mail@mail.ru",
-      "name": "",
-      "birthday": "1990-01-01"
-    }
-    """;
+            {
+              "login": "properlogin",
+              "email": "mail@mail.ru",
+              "name": "",
+              "birthday": "1990-01-01"
+            }
+            """;
 
     private void createValidUser(String userJson) throws Exception {
-        mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(userJson))
-                .andExpect(status().isCreated());
+        mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isCreated());
     }
 
     private void createInvalidUser(String userJson) throws Exception {
-        mockMvc.perform(post("/users")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(userJson))
-                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isBadRequest());
     }
 
     @Autowired
@@ -47,29 +40,27 @@ class UserControllerTest {
     }
 
 
-
-
     @Test
     void shouldReturnBadRequestWhenLoginInvalid() throws Exception {
         String invalidUserJson = """
-            {
-              "login": "невалидный логин!",
-              "email": "mail@mail.ru",
-              "name": "",
-              "birthday": "1990-01-01"
-            }
-            """;
+                {
+                  "login": "невалидный логин!",
+                  "email": "mail@mail.ru",
+                  "name": "",
+                  "birthday": "1990-01-01"
+                }
+                """;
 
         createInvalidUser(invalidUserJson);
 
         String invalidUserJson2 = """
-            {
-              "login": "",
-              "email": "mail@mail.ru",
-              "name": "",
-              "birthday": "1990-01-01"
-            }
-            """;
+                {
+                  "login": "",
+                  "email": "mail@mail.ru",
+                  "name": "",
+                  "birthday": "1990-01-01"
+                }
+                """;
 
         createInvalidUser(invalidUserJson2);
 
@@ -80,28 +71,18 @@ class UserControllerTest {
     void shouldReturnAllUsersAndPasteNameAsLogin() throws Exception {
         createValidUser(validTestUser);
         String validTestUser2 = """
-    {
-      "login": "properlogin2",
-      "email": "mail2@mail.ru",
-      "name": "oleg",
-      "birthday": "1990-01-01"
-    }
-    """;
+                {
+                  "login": "properlogin2",
+                  "email": "mail2@mail.ru",
+                  "name": "oleg",
+                  "birthday": "1990-01-01"
+                }
+                """;
         createValidUser(validTestUser2);
-        mockMvc.perform(get("/users"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$").isArray()) // проверка, что вернулся JSON-массив
-                .andExpect(jsonPath("$").isNotEmpty())
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].login").value("properlogin"))
-                .andExpect(jsonPath("$[0].email").value("mail@mail.ru"))
-                .andExpect(jsonPath("$[0].name").value("properlogin"))
-                .andExpect(jsonPath("$[0].birthday").value("1990-01-01"))
-                .andExpect(jsonPath("$[1].name").value("oleg"))
-                .andDo(result -> {
-            System.out.println("Response JSON: " + result.getResponse().getContentAsString());
-        });
+        mockMvc.perform(get("/users")).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$").isArray()) // проверка, что вернулся JSON-массив
+                .andExpect(jsonPath("$").isNotEmpty()).andExpect(jsonPath("$.length()").value(2)).andExpect(jsonPath("$[0].login").value("properlogin")).andExpect(jsonPath("$[0].email").value("mail@mail.ru")).andExpect(jsonPath("$[0].name").value("properlogin")).andExpect(jsonPath("$[0].birthday").value("1990-01-01")).andExpect(jsonPath("$[1].name").value("oleg")).andDo(result -> {
+                    System.out.println("Response JSON: " + result.getResponse().getContentAsString());
+                });
     }
 
     @Test
@@ -153,7 +134,8 @@ class UserControllerTest {
         createInvalidUser(wrongBirthDateUser);
     }
 
-    /** апдейт без айди         ++++
+    /**
+     * апдейт без айди         ++++
      * апдейт пользователя которого нет +++
      * апдейт с невалидными значенииями +++
      * апдейт с отсутвием не основных полей +++
@@ -183,14 +165,7 @@ class UserControllerTest {
                 """;
 
         mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andExpect(status().isOk());
-        mockMvc.perform(get("/users"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].login").value("properlogin"))
-                .andExpect(jsonPath("$[0].email").value("mail@mail.ru"))
-                .andExpect(jsonPath("$[0].name").value("UpdatedName"))
-                .andExpect(jsonPath("$[0].birthday").value("1999-01-01"));
+        mockMvc.perform(get("/users")).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].login").value("properlogin")).andExpect(jsonPath("$[0].email").value("mail@mail.ru")).andExpect(jsonPath("$[0].name").value("UpdatedName")).andExpect(jsonPath("$[0].birthday").value("1999-01-01"));
         String updatedValidTestUser2 = """
                 {
                   "id": 1,
@@ -201,14 +176,7 @@ class UserControllerTest {
                 }
                 """;
         mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser2)).andExpect(status().isOk());
-        mockMvc.perform(get("/users"))
-                .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.length()").value(1))
-                .andExpect(jsonPath("$[0].login").value("properlogin2"))
-                .andExpect(jsonPath("$[0].email").value("mail2@mail.ru"))
-                .andExpect(jsonPath("$[0].name").value("properlogin2"))
-                .andExpect(jsonPath("$[0].birthday").value("1990-02-02"));
+        mockMvc.perform(get("/users")).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].login").value("properlogin2")).andExpect(jsonPath("$[0].email").value("mail2@mail.ru")).andExpect(jsonPath("$[0].name").value("properlogin2")).andExpect(jsonPath("$[0].birthday").value("1990-02-02"));
     }
 
     @Test
@@ -289,9 +257,7 @@ class UserControllerTest {
                 """;
 
         mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andExpect(status().isOk());
-        mockMvc.perform(get("/users"))
-                .andExpect(jsonPath("$[0].name").value("UpdatedName"))
-                .andExpect(jsonPath("$[0].birthday").value("1990-01-01"));
+        mockMvc.perform(get("/users")).andExpect(jsonPath("$[0].name").value("UpdatedName")).andExpect(jsonPath("$[0].birthday").value("1990-01-01"));
 
     }
 
