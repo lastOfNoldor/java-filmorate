@@ -9,10 +9,7 @@ import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 
-
-import java.time.Instant;
 import java.time.LocalDate;
-import java.time.chrono.ChronoLocalDate;
 import java.util.*;
 
 @RestController
@@ -22,7 +19,7 @@ public class UserController {
     private static final Logger logger = (Logger) LoggerFactory.getLogger(UserController.class);
 
     @GetMapping
-    public Collection<User> findAll(){
+    public Collection<User> findAll() {
         return users.values();
     }
 
@@ -65,7 +62,7 @@ public class UserController {
                 Optional.ofNullable(newUser.getName()).ifPresent(oldUser::setName);
                 Optional.ofNullable(newUser.getBirthday()).ifPresent(oldUser::setBirthday);
                 logger.info("Данные пользователя успешно обновлены. ID: {}", newUser.getId());
-                users.put(oldUser.getId(),oldUser);
+                users.put(oldUser.getId(), oldUser);
                 return oldUser;
             }
             logger.error("Не найден пользователь для обновления, ID: {}", newUser.getId());
@@ -96,7 +93,7 @@ public class UserController {
         }
     }
 
-    private void credentialsAlreadyExists(String email,String login) {
+    private void credentialsAlreadyExists(String email, String login) {
         for (User userFromList : users.values()) {
             if (Objects.equals(userFromList.getEmail(), email)) {
                 logger.warn("Обнаружен уже используемый имейл: {}", email);
