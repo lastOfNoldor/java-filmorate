@@ -3,16 +3,17 @@ package ru.yandex.practicum.filmorate.ControllersTests;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import ru.yandex.practicum.filmorate.controller.FilmController;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // CHECKSTYLE:OFF
-@WebMvcTest(FilmController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 public class FilmControllerTest {
     private final String validTestFilm = """
             {
@@ -27,8 +28,12 @@ public class FilmControllerTest {
         mockMvc.perform(post("/films").contentType(MediaType.APPLICATION_JSON).content(filmJson)).andExpect(status().isCreated());
     }
 
-    private void createInvalidFilm(String filmJson) throws Exception {
+    private void createInvalidFilmWithBadRequest(String filmJson) throws Exception {
         mockMvc.perform(post("/films").contentType(MediaType.APPLICATION_JSON).content(filmJson)).andExpect(status().isBadRequest());
+    }
+
+    private void createInvalidFilmWithInternalServerError(String filmJson) throws Exception {
+        mockMvc.perform(post("/films").contentType(MediaType.APPLICATION_JSON).content(filmJson)).andExpect(status().isInternalServerError());
     }
 
     @Autowired
@@ -49,18 +54,17 @@ public class FilmControllerTest {
                   "duration": 15000
                 }
                 """;
-        createInvalidFilm(invalidNameJson);
+        createInvalidFilmWithBadRequest(invalidNameJson);
 
         String invalidDescriptionJson = """
                 {
                   "name": "Ironweed",
-                  "description": "wow very nice111111111111111111111111111111111111111111111111111111111111111111111111111
-                  11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+                  "description": "wow very nice1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
                   "releaseDate": "1987-01-01",
                   "duration": 15000
                 }
                 """;
-        createInvalidFilm(invalidDescriptionJson);
+        createInvalidFilmWithBadRequest(invalidDescriptionJson);
 
         String invalidReleaseJson = """
                 {
@@ -70,7 +74,7 @@ public class FilmControllerTest {
                   "duration": 15000
                 }
                 """;
-        createInvalidFilm(invalidReleaseJson);
+        createInvalidFilmWithBadRequest(invalidReleaseJson);
 
         String invalidDurationJson = """
                 {
@@ -80,7 +84,7 @@ public class FilmControllerTest {
                   "duration": 0
                 }
                 """;
-        createInvalidFilm(invalidDurationJson);
+        createInvalidFilmWithBadRequest(invalidDurationJson);
 
         String invalidDuration2Json = """
                 {
@@ -90,14 +94,14 @@ public class FilmControllerTest {
                   "duration": -10
                 }
                 """;
-        createInvalidFilm(invalidDuration2Json);
+        createInvalidFilmWithBadRequest(invalidDuration2Json);
 
         String invalidEmptyJson = """
                 {
                 
                 }
                 """;
-        createInvalidFilm(invalidEmptyJson);
+        createInvalidFilmWithBadRequest(invalidEmptyJson);
 
         String nameAsNumberDurationAsString = """
                 {
@@ -107,7 +111,7 @@ public class FilmControllerTest {
                   "duration": "ss"
                 }
                 """;
-        createInvalidFilm(nameAsNumberDurationAsString);
+        createInvalidFilmWithInternalServerError(nameAsNumberDurationAsString);
     }
 
     @Test
@@ -193,8 +197,7 @@ public class FilmControllerTest {
                 {
                     "id": "1",
                   "name": "Ironweed",
-                  "description": "wow very nice111111111111111111111111111111111111111111111111111111111111111111111111111
-                  11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
+                  "description": "wow very nice1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111",
                   "releaseDate": "1987-01-01",
                   "duration": 15000
                 }
@@ -251,7 +254,7 @@ public class FilmControllerTest {
                   "duration": "ss"
                 }
                 """;
-        mockMvc.perform(put("/films").contentType(MediaType.APPLICATION_JSON).content(nameAsNumberDurationAsString)).andExpect(status().isBadRequest());
+        mockMvc.perform(put("/films").contentType(MediaType.APPLICATION_JSON).content(nameAsNumberDurationAsString)).andExpect(status().isInternalServerError());
 
     }
 

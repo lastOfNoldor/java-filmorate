@@ -3,75 +3,88 @@ package ru.yandex.practicum.filmorate.controller;
 import ch.qos.logback.classic.Logger;
 import jakarta.validation.Valid;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.Collection;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/users")
 public class UserController {
-    private final Map<Long, User> users = new HashMap<>();
+    private final UserStorage users;
+    private final UserService userService;
     private static final Logger logger = (Logger) LoggerFactory.getLogger(UserController.class);
+
+    @Autowired
+    public UserController(UserStorage users, UserService userService) {
+        this.users = users;
+        this.userService = userService;
+    }
 
     @GetMapping
     public Collection<User> findAll() {
-        return users.values();
+        logger.info("Запрос на получение данных о всех пользователях");
+        return users.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Optional<User> getUserById(@PathVariable Long id) {
+        logger.info("Запрос на получение данных о пользователе с Id: {}", id);
+        return users.findById(id);
+    }
+
+    @PutMapping("/{id}/friends/{friendId}")
+    public User addFriend(@PathVariable Long id, @PathVariable Long friendId) {
+        logger.info("Запрос на добавление в друзья пользователем с Id: {} пользователя c Id: {}", id, friendId);
+        return userService.addFriend(id, friendId);
+    }
+
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public User deleteFriend(@PathVariable Long id, @PathVariable Long friendId) {
+        logger.info("Запрос на удаление из друзей пользователем с Id: {} пользователя c Id: {}", id, friendId);
+        return userService.deleteFriend(id, friendId);
+    }
+
+    @GetMapping("/{id}/friends")
+    public Collection<User> getFriends(@PathVariable Long id) {
+        logger.info("Запрос на получение списка друзей пользователя с Id: {}", id);
+        return userService.getFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public Collection<User> getCommonFriend(@PathVariable Long id, @PathVariable Long otherId) {
+        logger.info("Запрос на получение списка обших друзей пользователя с Id: {} с пользователем с Id: {}", id, otherId);
+        return userService.getCommonFriends(id, otherId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public User createUser(@Valid @RequestBody User user) {
-        try {
-            if (user.getId() == null) {
-                logger.info("Запрос на создание нового пользователя: {}", user.getLogin());
-                credentialsAlreadyExists(user.getEmail(), user.getLogin());
-                userDataValidate(user);
-                user.setId(getNextId());
-                users.put(user.getId(), user);
-                logger.info("Успешное создание пользователя: {}. ID: {}", user.getLogin(), user.getId());
-                return user;
-            }
+        if (user.getId() != null) {
+            logger.error("В запросе на создание присутствует ID пользователя");
             throw new ValidationException("Новый пользователь не должен иметь Id до регистрации");
-        } catch (ValidationException e) {
-            logger.error("Ошибка при создании нового пользователя: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
         }
+        logger.info("Запрос на создание нового пользователя: {}", user.getLogin());
+        userDataValidate(user);
+        return users.create(user);
     }
 
     @PutMapping
     public User updateUser(@Valid @RequestBody User newUser) {
         if (newUser.getId() == null) {
             logger.error("В запросе отсутствует ID пользователя");
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "ID пользователя не указан");
+            throw new ValidationException("ID пользователя не указан");
         }
         logger.info("Запрос на обновление данных пользователя с ID: {}", newUser.getId());
-        try {
-            userDataValidate(newUser);
-            if (users.containsKey(newUser.getId())) {
-                User oldUser = users.get(newUser.getId());
-                if (!Objects.equals(newUser.getEmail(), oldUser.getEmail())) {
-                    credentialsAlreadyExists(newUser.getEmail(), newUser.getLogin());
-                }
-                oldUser.setLogin(newUser.getLogin());
-                oldUser.setEmail(newUser.getEmail());
-                Optional.ofNullable(newUser.getName()).ifPresent(oldUser::setName);
-                Optional.ofNullable(newUser.getBirthday()).ifPresent(oldUser::setBirthday);
-                logger.info("Данные пользователя успешно обновлены. ID: {}", newUser.getId());
-                users.put(oldUser.getId(), oldUser);
-                return oldUser;
-            }
-            logger.error("Не найден пользователь для обновления, ID: {}", newUser.getId());
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Пользователь не найден");
-        } catch (ValidationException e) {
-            logger.error("Ошибка обновления данных: {}", e.getMessage());
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage());
-        }
-
+        userDataValidate(newUser);
+        return users.update(newUser);
     }
 
 
@@ -93,30 +106,10 @@ public class UserController {
         }
     }
 
-    private void credentialsAlreadyExists(String email, String login) {
-        for (User userFromList : users.values()) {
-            if (Objects.equals(userFromList.getEmail(), email)) {
-                logger.warn("Обнаружен уже используемый имейл: {}", email);
-                throw new ValidationException("Этот имейл уже используется");
-            }
-            if (Objects.equals(userFromList.getLogin(), login)) {
-                logger.warn("Обнаружен уже используемый логин: {}", login);
-                throw new ValidationException("Этот логин уже используется");
-            }
-
-        }
-    }
-
-    private long getNextId() {
-        long currentMaxId = users.keySet().stream().mapToLong(id -> id).max().orElse(0);
-        return ++currentMaxId;
-
-    }
-
     // метод для изоляции тестов, чтобы каждый тест в UserControllerTest не зависил от предыдущего
     @DeleteMapping("/reset")
     public void reset() {
-        users.clear();
+        users.deleteAll();
     }
 
 

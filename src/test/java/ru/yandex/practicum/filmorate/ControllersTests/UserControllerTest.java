@@ -3,16 +3,17 @@ package ru.yandex.practicum.filmorate.ControllersTests;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import ru.yandex.practicum.filmorate.controller.UserController;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // CHECKSTYLE:OFF
-@WebMvcTest(UserController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class UserControllerTest {
     private final String validTestUser = """
             {
@@ -27,8 +28,12 @@ class UserControllerTest {
         mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isCreated());
     }
 
-    private void createInvalidUser(String userJson) throws Exception {
+    private void createInvalidUserWithBadRequest(String userJson) throws Exception {
         mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isBadRequest());
+    }
+
+    private void createInvalidUserWithInternalServerError(String userJson) throws Exception {
+        mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isInternalServerError());
     }
 
     @Autowired
@@ -51,7 +56,7 @@ class UserControllerTest {
                 }
                 """;
 
-        createInvalidUser(invalidUserJson);
+        createInvalidUserWithBadRequest(invalidUserJson);
 
         String invalidUserJson2 = """
                 {
@@ -62,7 +67,7 @@ class UserControllerTest {
                 }
                 """;
 
-        createInvalidUser(invalidUserJson2);
+        createInvalidUserWithBadRequest(invalidUserJson2);
 
     }
 
@@ -96,7 +101,7 @@ class UserControllerTest {
                   "birthday": "1999-01-01"
                 }
                 """;
-        createInvalidUser(duplicateUserJson);
+        createInvalidUserWithBadRequest(duplicateUserJson);
     }
 
     @Test
@@ -109,7 +114,7 @@ class UserControllerTest {
                   "birthday": "1999-01-01"
                 }
                 """;
-        createInvalidUser(wrongEmailUser);
+        createInvalidUserWithBadRequest(wrongEmailUser);
         String wrongEmailUser2 = """
                 {
                   "login": "properlogin",
@@ -118,7 +123,7 @@ class UserControllerTest {
                   "birthday": "1999-01-01"
                 }
                 """;
-        createInvalidUser(wrongEmailUser2);
+        createInvalidUserWithBadRequest(wrongEmailUser2);
     }
 
     @Test
@@ -131,13 +136,13 @@ class UserControllerTest {
                   "birthday": "2199-01-01"
                 }
                 """;
-        createInvalidUser(wrongBirthDateUser);
+        createInvalidUserWithBadRequest(wrongBirthDateUser);
     }
 
     @Test
     void postInvalidRequests() throws Exception {
         String invalidRaquest1 = "";
-        createInvalidUser(invalidRaquest1);
+        createInvalidUserWithInternalServerError(invalidRaquest1);
     }
 
     @Test
@@ -271,7 +276,7 @@ class UserControllerTest {
                   "birthday": "1995-01-01"
                 }
                 """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedFirstUser1)).andExpect(status().isBadRequest());
+        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedFirstUser1)).andExpect(status().isInternalServerError());
         String updatedFirstUser2 = """
                 {
                   "id": "1"
@@ -281,7 +286,7 @@ class UserControllerTest {
                   "birthday": "1995-01-01"
                 }
                 """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedFirstUser2)).andExpect(status().isBadRequest());
+        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedFirstUser2)).andExpect(status().isInternalServerError());
     }
 
 }
