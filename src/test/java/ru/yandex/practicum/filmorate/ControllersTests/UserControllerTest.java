@@ -7,8 +7,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.yandex.practicum.filmorate.service.UserService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // CHECKSTYLE:OFF
@@ -39,9 +41,15 @@ class UserControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private UserService userService;
+
+
     @BeforeEach
     public void clearData() throws Exception {
         mockMvc.perform(delete("/users/reset")).andExpect(status().isOk());
+        userService.clearCredentialsSets();
+
     }
 
 
@@ -250,7 +258,7 @@ class UserControllerTest {
                 }
                 """;
 
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andExpect(status().isOk());
+        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andDo(print()).andExpect(status().isOk());
         mockMvc.perform(get("/users")).andExpect(jsonPath("$[0].name").value("UpdatedName")).andExpect(jsonPath("$[0].birthday").value("1990-01-01"));
 
     }

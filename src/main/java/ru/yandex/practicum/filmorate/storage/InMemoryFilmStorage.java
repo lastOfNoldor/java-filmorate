@@ -2,13 +2,9 @@ package ru.yandex.practicum.filmorate.storage;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -17,8 +13,8 @@ public class InMemoryFilmStorage implements FilmStorage {
 
 
     @Override
-    public Collection<Film> findAll() {
-        return films.values();
+    public List<Film> findAll() {
+        return new ArrayList<>(films.values());
     }
 
     @Override
@@ -30,24 +26,13 @@ public class InMemoryFilmStorage implements FilmStorage {
     }
 
     @Override
-    public Film update(Film newFilm) {
-        if (films.containsKey(newFilm.getId())) {
-            Film oldFilm = films.get(newFilm.getId());
-            oldFilm.setName(newFilm.getName());
-            Optional.ofNullable(newFilm.getDescription()).ifPresent(oldFilm::setDescription);
-            Optional.ofNullable(newFilm.getReleaseDate()).ifPresent(oldFilm::setReleaseDate);
-            Optional.ofNullable(newFilm.getDuration()).ifPresent(oldFilm::setDuration);
-            log.info("Данные фильма успешно обновлены. ID: {}", newFilm.getId());
-            films.put(oldFilm.getId(), oldFilm);
-            return oldFilm;
-        }
-        log.error("Не найден фильм для обновления, ID: {}", newFilm.getId());
-        throw new NotFoundException("Фильм не найден");
+    public Film update(Film updatingFilm) {
+        films.put(updatingFilm.getId(), updatingFilm);
+        return updatingFilm;
     }
 
     @Override
     public Optional<Film> findById(Long id) {
-        log.info("Выполнение запроса поиска фильма с id: {} в хранилище", id);
         return Optional.ofNullable(films.get(id));
     }
 

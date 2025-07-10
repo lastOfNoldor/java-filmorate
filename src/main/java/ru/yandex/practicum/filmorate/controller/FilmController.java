@@ -2,43 +2,37 @@ package ru.yandex.practicum.filmorate.controller;
 
 import ch.qos.logback.classic.Logger;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
 
 import java.time.LocalDate;
 import java.time.Month;
-import java.util.Collection;
-import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/films")
+@RequiredArgsConstructor
 public class FilmController {
-    private final FilmStorage films;
+
     private final FilmService filmService;
     private static final Logger logger = (Logger) LoggerFactory.getLogger(FilmController.class);
 
-    @Autowired
-    public FilmController(FilmStorage films, FilmService filmService) {
-        this.films = films;
-        this.filmService = filmService;
-    }
 
     @GetMapping
-    public Collection<Film> findAll() {
+    public List<Film> findAll() {
         logger.info("Запрос на получение данных о всех фильмах");
-        return films.findAll();
+        return filmService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<Film> getFilmById(@PathVariable Long id) {
+    public Film getFilmById(@PathVariable Long id) {
         logger.info("Запрос на получение данных о фильме с Id: {}", id);
-        return films.findById(id);
+        return filmService.findById(id);
     }
 
     @PutMapping("{id}/like/{userId}")
@@ -54,7 +48,7 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public Collection<Film> getPopularFilms(@RequestParam(defaultValue = "10", name = "count") int count) {
+    public List<Film> getPopularFilms(@RequestParam(defaultValue = "10", name = "count") int count) {
         logger.info("Запрос на получение {} самых популярных фильмов в базе", count);
         return filmService.getPopularFilms(count);
     }
@@ -62,24 +56,16 @@ public class FilmController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Film createFilm(@Valid @RequestBody Film film) {
-        if (film.getId() != null) {
-            logger.error("В запросе на создание присутствует ID фильма");
-            throw new ValidationException("Фильм с id: " + film.getId() + " уже существует");
-        }
         logger.info("Запрос на добавление нового фильма: {}", film.getName());
         filmValidate(film);
-        return films.create(film);
+        return filmService.create(film);
     }
 
     @PutMapping
     public Film updateFilm(@Valid @RequestBody Film newFilm) {
-        if (newFilm.getId() == null) {
-            logger.error("В запросе отсутствует ID фильма");
-            throw new ValidationException("ID фильма не указан");
-        }
         logger.info("Запрос на обновление данных фильма с ID: {}", newFilm.getId());
         filmValidate(newFilm);
-        return films.update(newFilm);
+        return filmService.update(newFilm);
     }
 
     private void filmValidate(Film film) {
@@ -110,7 +96,7 @@ public class FilmController {
     // метод для изоляции тестов, чтобы каждый тест в UserControllerTest не зависил от предыдущего
     @DeleteMapping("/reset")
     public void reset() {
-        films.deleteAll();
+        filmService.deleteAll();
     }
 
 

@@ -2,42 +2,35 @@ package ru.yandex.practicum.filmorate.controller;
 
 import ch.qos.logback.classic.Logger;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
-import java.util.Collection;
-import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
-    private final UserStorage users;
     private final UserService userService;
     private static final Logger logger = (Logger) LoggerFactory.getLogger(UserController.class);
 
-    @Autowired
-    public UserController(UserStorage users, UserService userService) {
-        this.users = users;
-        this.userService = userService;
-    }
 
     @GetMapping
-    public Collection<User> findAll() {
+    public List<User> findAll() {
         logger.info("Запрос на получение данных о всех пользователях");
-        return users.findAll();
+        return userService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Optional<User> getUserById(@PathVariable Long id) {
+    public User getUserById(@PathVariable Long id) {
         logger.info("Запрос на получение данных о пользователе с Id: {}", id);
-        return users.findById(id);
+        return userService.findById(id);
     }
 
     @PutMapping("/{id}/friends/{friendId}")
@@ -53,38 +46,30 @@ public class UserController {
     }
 
     @GetMapping("/{id}/friends")
-    public Collection<User> getFriends(@PathVariable Long id) {
+    public List<User> getFriends(@PathVariable Long id) {
         logger.info("Запрос на получение списка друзей пользователя с Id: {}", id);
         return userService.getFriends(id);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
-    public Collection<User> getCommonFriend(@PathVariable Long id, @PathVariable Long otherId) {
-        logger.info("Запрос на получение списка обших друзей пользователя с Id: {} с пользователем с Id: {}", id, otherId);
+    public List<User> getCommonFriend(@PathVariable Long id, @PathVariable Long otherId) {
+        logger.info("Запрос на получение списка общих друзей пользователя с Id: {} с пользователем с Id: {}", id, otherId);
         return userService.getCommonFriends(id, otherId);
     }
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public User createUser(@Valid @RequestBody User user) {
-        if (user.getId() != null) {
-            logger.error("В запросе на создание присутствует ID пользователя");
-            throw new ValidationException("Новый пользователь не должен иметь Id до регистрации");
-        }
         logger.info("Запрос на создание нового пользователя: {}", user.getLogin());
         userDataValidate(user);
-        return users.create(user);
+        return userService.create(user);
     }
 
     @PutMapping
     public User updateUser(@Valid @RequestBody User newUser) {
-        if (newUser.getId() == null) {
-            logger.error("В запросе отсутствует ID пользователя");
-            throw new ValidationException("ID пользователя не указан");
-        }
         logger.info("Запрос на обновление данных пользователя с ID: {}", newUser.getId());
         userDataValidate(newUser);
-        return users.update(newUser);
+        return userService.update(newUser);
     }
 
 
@@ -109,7 +94,7 @@ public class UserController {
     // метод для изоляции тестов, чтобы каждый тест в UserControllerTest не зависил от предыдущего
     @DeleteMapping("/reset")
     public void reset() {
-        users.deleteAll();
+        userService.deleteAll();
     }
 
 
