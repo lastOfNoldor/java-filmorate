@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
@@ -30,11 +31,19 @@ public class UserService {
     public User addFriend(Long userId, Long friendId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
         User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendIds().contains(friendId)) {
+        if (user.getFriendIds().get(friendId).equals(FriendshipStatus.CONFIRMED)) {
             throw new ValidationException("Пользователи уже являются друзьями");
+        } else if (user.getFriendIds().get(friendId).equals(FriendshipStatus.PENDING)) {
+            throw new ValidationException("Заявка у друзья уже отправлена");
+        } else if (user.getFriendIds().get(friendId).equals(FriendshipStatus.RECEIVED)) {
+            user.getFriendIds().put(friendId, FriendshipStatus.CONFIRMED);
+            friend.getFriendIds().put(userId, FriendshipStatus.CONFIRMED);
+            users.update(user);
+            users.update(friend);
+            return user;
         }
-        user.getFriendIds().add(friendId);
-        friend.getFriendIds().add(userId);
+        user.getFriendIds().put(friendId, FriendshipStatus.PENDING);
+        friend.getFriendIds().put(userId, FriendshipStatus.RECEIVED);
         users.update(user);
         users.update(friend);
         return user;
@@ -43,7 +52,7 @@ public class UserService {
     public User deleteFriend(Long userId, Long friendId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
         User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendIds().contains(friendId)) {
+        if (user.getFriendIds().containsKey(friendId)) {
             user.getFriendIds().remove(friendId);
             friend.getFriendIds().remove(userId);
             users.update(user);
@@ -54,13 +63,13 @@ public class UserService {
 
     public List<User> getFriends(Long userId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        return user.getFriendIds().stream().map(users::findById).flatMap(Optional::stream).toList();
+        return user.getFriendIds().keySet().stream().map(users::findById).flatMap(Optional::stream).toList();
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
         User other = users.findById(otherId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + otherId + " не найден"));
-        return user.getFriendIds().stream().filter(other.getFriendIds()::contains).map(users::findById).flatMap(Optional::stream).toList();
+        return user.getFriendIds().keySet().stream().filter(other.getFriendIds().keySet()::contains).map(users::findById).flatMap(Optional::stream).toList();
     }
 
 

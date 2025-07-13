@@ -19,5 +19,7 @@ public class Film {
     private LocalDate releaseDate;
     private Long duration;
     private int likesCount;
+    private FilmGenre filmGenre;
+    private MPARate mpaRate;
     private Set<Long> likedUserIds = new HashSet<>();
 }

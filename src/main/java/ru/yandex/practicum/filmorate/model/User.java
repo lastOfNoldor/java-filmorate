@@ -6,8 +6,8 @@ import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.HashMap;
+import java.util.Map;
 
 @Data
 public class User {
@@ -21,5 +21,5 @@ public class User {
     private String login;
     private String name;
     private LocalDate birthday;
-    private final Set<Long> friendIds = new HashSet<>();
+    private final Map<Long, FriendshipStatus> friendIds = new HashMap<>();
 }

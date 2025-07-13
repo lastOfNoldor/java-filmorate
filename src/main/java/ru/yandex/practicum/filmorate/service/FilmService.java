@@ -48,6 +48,8 @@ public class FilmService {
         Film oldFilm = byId.get();
         oldFilm.setName(newFilm.getName());
         Optional.ofNullable(newFilm.getDescription()).ifPresent(oldFilm::setDescription);
+        Optional.ofNullable(newFilm.getFilmGenre()).ifPresent(oldFilm::setFilmGenre);
+        Optional.ofNullable(newFilm.getMpaRate()).ifPresent(oldFilm::setMpaRate);
         Optional.ofNullable(newFilm.getReleaseDate()).ifPresent(oldFilm::setReleaseDate);
         Optional.ofNullable(newFilm.getDuration()).ifPresent(oldFilm::setDuration);
         log.info("Данные фильма успешно обновлены. ID: {}", newFilm.getId());
