@@ -5,10 +5,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.JdbcUserRepostiory;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.util.*;
@@ -17,7 +19,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-    private final UserStorage users;
+    private final JdbcUserRepostiory users;
     private final Set<String> emailSet = new HashSet<>();
     private final Set<String> loginSet = new HashSet<>();
 
@@ -29,47 +31,64 @@ public class UserService {
 
 
     public User addFriend(Long userId, Long friendId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendIds().get(friendId).equals(FriendshipStatus.CONFIRMED)) {
+        // Получаем пользователей (с проверкой существования)
+        User user = getUserOrThrow(userId);
+        User friend = getUserOrThrow(friendId);
+        // Проверяем существующие статусы
+        FriendshipStatus userToFriendStatus = user.getFriendship().get(friendId);
+        FriendshipStatus friendToUserStatus = friend.getFriendship().get(userId);
+        // Обрабатываем все возможные кейсы
+        if (userToFriendStatus == null && friendToUserStatus == null) {
+            // Нет существующей связи - создаем новую заявку
+            if (!users.saveFriendshipRequest(userId, friendId, FriendshipStatus.UNCONFIRMED)) {
+                throw new InternalServerException("Не удалось сохранить данные");
+            }
+            user.getFriendship().put(friendId, FriendshipStatus.UNCONFIRMED);
+        } else if (userToFriendStatus == FriendshipStatus.UNCONFIRMED && friendToUserStatus == null) {
+            throw new ValidationException("Заявка в друзья уже отправлена");
+        } else if (userToFriendStatus == FriendshipStatus.CONFIRMED || friendToUserStatus == FriendshipStatus.CONFIRMED) {
             throw new ValidationException("Пользователи уже являются друзьями");
-        } else if (user.getFriendIds().get(friendId).equals(FriendshipStatus.PENDING)) {
-            throw new ValidationException("Заявка у друзья уже отправлена");
-        } else if (user.getFriendIds().get(friendId).equals(FriendshipStatus.RECEIVED)) {
-            user.getFriendIds().put(friendId, FriendshipStatus.CONFIRMED);
-            friend.getFriendIds().put(userId, FriendshipStatus.CONFIRMED);
-            users.update(user);
-            users.update(friend);
-            return user;
+        } else if (friendToUserStatus == FriendshipStatus.UNCONFIRMED && userToFriendStatus == null) {
+            // Встречная заявка - подтверждаем дружбу
+            if (!users.updateFriendshipStatus(userId, friendId, FriendshipStatus.CONFIRMED)) {
+                throw new InternalServerException("Не удалось сохранить данные");
+            }
+            user.getFriendship().put(friendId, FriendshipStatus.CONFIRMED);
+            friend.getFriendship().put(userId, FriendshipStatus.CONFIRMED);
+        } else {
+            throw new ValidationException("Некорректное состояние дружбы");
         }
-        user.getFriendIds().put(friendId, FriendshipStatus.PENDING);
-        friend.getFriendIds().put(userId, FriendshipStatus.RECEIVED);
-        users.update(user);
-        users.update(friend);
         return user;
+    }
+
+    private User getUserOrThrow(Long id) {
+        return users.findById(id).orElseThrow(() -> new NotFoundException("Пользователь с id: " + id + " не найден"));
     }
 
     public User deleteFriend(Long userId, Long friendId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
         User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendIds().containsKey(friendId)) {
-            user.getFriendIds().remove(friendId);
-            friend.getFriendIds().remove(userId);
-            users.update(user);
-            users.update(friend);
+        if (user.getFriendship().get(friendId) == FriendshipStatus.CONFIRMED) {
+            users.makeConfirmedFriendshipUnconfirmed(userId,friendId,FriendshipStatus.UNCONFIRMED);
+            friend.getFriendship().put(userId, FriendshipStatus.UNCONFIRMED);
+        } else if (user.getFriendship().get(friendId) == FriendshipStatus.UNCONFIRMED) {
+            users.deleteUnconfirmedFriendship(userId,friendId);
+        } else {
+            throw new NotFoundException("Дружба с этим пользователем не существует");
         }
+        user.getFriendship().remove(friendId);
         return user;
     }
 
     public List<User> getFriends(Long userId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        return user.getFriendIds().keySet().stream().map(users::findById).flatMap(Optional::stream).toList();
+        return user.getFriendship().keySet().stream().map(users::findById).flatMap(Optional::stream).toList();
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
         User other = users.findById(otherId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + otherId + " не найден"));
-        return user.getFriendIds().keySet().stream().filter(other.getFriendIds().keySet()::contains).map(users::findById).flatMap(Optional::stream).toList();
+        return user.getFriendship().keySet().stream().filter(other.getFriendship().keySet()::contains).map(users::findById).flatMap(Optional::stream).toList();
     }
 
 
@@ -96,9 +115,11 @@ public class UserService {
         }
         emailAlreadyExists(createdUser.getEmail());
         loginAlreadyExists(createdUser.getLogin());
+        User result = users.create(createdUser);
+        log.info("Успешное создание пользователя: {}. ID: {}", result.getLogin(), result.getId());
         emailSet.add(createdUser.getEmail());
         loginSet.add(createdUser.getLogin());
-        return users.create(createdUser);
+        return result;
     }
 
     public User update(@Valid User newUser) {
@@ -144,11 +165,11 @@ public class UserService {
         }
     }
 
-    public void deleteAll() {
+    public void deleteAll() {   //метод для тестов
         users.deleteAll();
     }
 
-    public void clearCredentialsSets() {
+    public void clearCredentialsSets() { //метод для тестов
         emailSet.clear();
         loginSet.clear();
     }
