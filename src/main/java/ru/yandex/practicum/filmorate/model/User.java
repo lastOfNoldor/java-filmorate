@@ -7,8 +7,6 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
 
 @Data
 @EqualsAndHashCode(of = "id")
@@ -23,5 +21,4 @@ public class User {
     private String login;
     private String name;
     private LocalDate birthday;
-    private Map<Long, FriendshipStatus> friendship;
 }

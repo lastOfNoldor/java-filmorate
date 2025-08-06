@@ -5,13 +5,10 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.InternalServerException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.FriendshipStatus;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.JdbcUserRepostiory;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.JdbcUserRepository;
 
 import java.util.*;
 
@@ -19,7 +16,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-    private final JdbcUserRepostiory users;
+    private final JdbcUserRepository users;
     private final Set<String> emailSet = new HashSet<>();
     private final Set<String> loginSet = new HashSet<>();
 
@@ -29,36 +26,13 @@ public class UserService {
         users.findAll().forEach(user -> loginSet.add(user.getLogin()));
     }
 
-
     public User addFriend(Long userId, Long friendId) {
-        // Получаем пользователей (с проверкой существования)
-        User user = getUserOrThrow(userId);
+        getUserOrThrow(userId);
         User friend = getUserOrThrow(friendId);
-        // Проверяем существующие статусы
-        FriendshipStatus userToFriendStatus = user.getFriendship().get(friendId);
-        FriendshipStatus friendToUserStatus = friend.getFriendship().get(userId);
-        // Обрабатываем все возможные кейсы
-        if (userToFriendStatus == null && friendToUserStatus == null) {
-            // Нет существующей связи - создаем новую заявку
-            if (!users.saveFriendshipRequest(userId, friendId, FriendshipStatus.UNCONFIRMED)) {
-                throw new InternalServerException("Не удалось сохранить данные");
-            }
-            user.getFriendship().put(friendId, FriendshipStatus.UNCONFIRMED);
-        } else if (userToFriendStatus == FriendshipStatus.UNCONFIRMED && friendToUserStatus == null) {
-            throw new ValidationException("Заявка в друзья уже отправлена");
-        } else if (userToFriendStatus == FriendshipStatus.CONFIRMED || friendToUserStatus == FriendshipStatus.CONFIRMED) {
-            throw new ValidationException("Пользователи уже являются друзьями");
-        } else if (friendToUserStatus == FriendshipStatus.UNCONFIRMED && userToFriendStatus == null) {
-            // Встречная заявка - подтверждаем дружбу
-            if (!users.updateFriendshipStatus(userId, friendId, FriendshipStatus.CONFIRMED)) {
-                throw new InternalServerException("Не удалось сохранить данные");
-            }
-            user.getFriendship().put(friendId, FriendshipStatus.CONFIRMED);
-            friend.getFriendship().put(userId, FriendshipStatus.CONFIRMED);
-        } else {
-            throw new ValidationException("Некорректное состояние дружбы");
+        if (!users.saveFriendshipRequest(userId, friendId)) {
+            throw new ValidationException("Запрос уже существует");
         }
-        return user;
+        return friend;
     }
 
     private User getUserOrThrow(Long id) {
@@ -66,29 +40,21 @@ public class UserService {
     }
 
     public User deleteFriend(Long userId, Long friendId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendship().get(friendId) == FriendshipStatus.CONFIRMED) {
-            users.makeConfirmedFriendshipUnconfirmed(userId,friendId,FriendshipStatus.UNCONFIRMED);
-            friend.getFriendship().put(userId, FriendshipStatus.UNCONFIRMED);
-        } else if (user.getFriendship().get(friendId) == FriendshipStatus.UNCONFIRMED) {
-            users.deleteUnconfirmedFriendship(userId,friendId);
-        } else {
-            throw new NotFoundException("Дружба с этим пользователем не существует");
-        }
-        user.getFriendship().remove(friendId);
+        User user = getUserOrThrow(userId);
+        getUserOrThrow(friendId);
+        users.deleteFriendshipRequest(userId, friendId);
         return user;
     }
 
     public List<User> getFriends(Long userId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        return user.getFriendship().keySet().stream().map(users::findById).flatMap(Optional::stream).toList();
+        getUserOrThrow(userId);
+        return List.copyOf(users.findFriends(userId));
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        User other = users.findById(otherId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + otherId + " не найден"));
-        return user.getFriendship().keySet().stream().filter(other.getFriendship().keySet()::contains).map(users::findById).flatMap(Optional::stream).toList();
+        getUserOrThrow(userId);
+        getUserOrThrow(otherId);
+        return List.copyOf(users.findFriends(userId).stream().filter(users.findFriends(otherId)::contains).toList());
     }
 
 
@@ -129,7 +95,7 @@ public class UserService {
         }
         Optional<User> byId = users.findById(newUser.getId());
         if (byId.isEmpty()) {
-            log.error("Не найден фильм для обновления, ID: {}", newUser.getId());
+            log.error("Не найден пользователь для обновления, ID: {}", newUser.getId());
             throw new NotFoundException("Пользователь не найден");
         }
         User oldUser = byId.get();

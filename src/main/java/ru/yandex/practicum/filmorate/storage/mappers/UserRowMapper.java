@@ -5,7 +5,6 @@ import ru.yandex.practicum.filmorate.model.User;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.LocalDate;
 
 public class UserRowMapper implements RowMapper<User> {
     @Override

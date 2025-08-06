@@ -66,9 +66,8 @@ public class UserController {
     }
 
     @PutMapping
-    public User updateUser(@Valid @RequestBody User newUser) {
+    public User updateUser(@RequestBody User newUser) {
         logger.info("Запрос на обновление данных пользователя с ID: {}", newUser.getId());
-        userDataValidate(newUser);
         return userService.update(newUser);
     }
 
@@ -96,7 +95,6 @@ public class UserController {
     public void reset() {
         userService.deleteAll();
     }
-
 
 }
 

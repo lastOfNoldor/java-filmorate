@@ -4,7 +4,7 @@
 
 ## ER-схема проекта:
 
-![ER Diagram](images/ERD.png)
+![ER Diagram](images/ERDFinal.png)
 
 # Примеры SQL-запросов:
 

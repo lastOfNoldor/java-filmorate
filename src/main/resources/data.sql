@@ -6,9 +6,9 @@ merge into MPA_rates(id, name) VALUES
 (5, 'NC-17');
 
 merge into GENRES(id, name) VALUES
-(1, 'COMEDY'),
-(2, 'DRAMA'),
-(3, 'CARTOON'),
-(4, 'THRILLER'),
-(5, 'DOCUMENTARY'),
-(6, 'ACTION');
+(1, 'Комедия'),
+(2, 'Драма'),
+(3, 'Мультфильм'),
+(4, 'Триллер'),
+(5, 'Документальный'),
+(6, 'Боевик');

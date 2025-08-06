@@ -1,13 +1,12 @@
 package ru.yandex.practicum.filmorate.model;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Data
@@ -19,10 +18,11 @@ public class Film {
     @NotNull
     private String name;
     private String description;
+    @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate releaseDate;
     private Long duration;
-    private int likesCount;
-    private List<FilmGenre> filmGenre;
-    private MPARate mpaRate;
-    private Set<Long> likedUserIds = new HashSet<>();
+    private Integer likesCount;
+    private Set<FilmGenre> genres;
+    private MPARate mpa;
+    private Set<Long> likedUserIds;
 }
