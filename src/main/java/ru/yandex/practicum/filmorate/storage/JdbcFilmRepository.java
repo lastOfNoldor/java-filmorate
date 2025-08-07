@@ -77,17 +77,12 @@ public class JdbcFilmRepository implements FilmStorage {
     protected final GenreRowMapper genreMapper = new GenreRowMapper();
 
     public List<Film> findAll() {
-        // Основные данные (фильмы(cMPA) + жанры + лайки) В 3 ЗАПРОСА, А НЕ N+1
         List<Film> films = jdbc.query(FIND_ALL_FILMS_QUERY, Collections.emptyMap(), mapper);
-        // Жанры для всех фильмов одним запросом
         if (!films.isEmpty()) {
-            // Загрузка и группировка жанров
             Map<Long, Set<FilmGenre>> genresMap = new HashMap<>();
             jdbc.query(FIND_ALL_GENRES_FOR_ALL_FILMS, (rs, rowNum) -> genresMap.computeIfAbsent(rs.getLong("film_id"), k -> new HashSet<>()).add(genreMapper.mapRow(rs, rowNum)));
-            // Загрузка и группировка жанров likeids
             Map<Long, Set<Long>> likedUsersIdsMap = new HashMap<>();
             jdbc.query(FIND_ALL_FILMS_LIKED_IDS, (rs, rowNum) -> likedUsersIdsMap.computeIfAbsent(rs.getLong("film_id"), k -> new HashSet<>()).add(rs.getLong("user_id")));
-            // Назначение данных фильмам
             films.forEach(f -> {
                 f.setGenres(genresMap.getOrDefault(f.getId(), Set.of()));
                 f.setLikedUserIds(likedUsersIdsMap.getOrDefault(f.getId(), Set.of()));
@@ -121,8 +116,7 @@ public class JdbcFilmRepository implements FilmStorage {
     private Set<FilmGenre> findFilmGenres(Long id) {
         MapSqlParameterSource param = new MapSqlParameterSource("id", id);
         Set<FilmGenre> genres = new HashSet<>();
-        /*(rs, rowNum) -> genres.add(genreMapper.mapRow(rs, rowNum))  А НЕ
-        jdbc.query(FIND_GENRES_BY_FILM_ID, param, genreMapper) ПОТОМУ ЧТО нужен Set а не List*/
+
         jdbc.query(FIND_GENRES_BY_FILM_ID, param, (rs, rowNum) -> genres.add(genreMapper.mapRow(rs, rowNum)));
         return genres;
     }
@@ -158,14 +152,12 @@ public class JdbcFilmRepository implements FilmStorage {
     @Override
     @Transactional
     public Film update(Film film) {
-        // 1. Обновление основных данных фильма
         MapSqlParameterSource filmParams = new MapSqlParameterSource().addValue("name", film.getName()).addValue("description", film.getDescription()).addValue("release_date", film.getReleaseDate()).addValue("duration", film.getDuration()).addValue("mpa_id", film.getMpa().getId()).addValue("id", film.getId());
 
         int rowsUpdated = jdbc.update(UPDATE_FILM, filmParams);
         if (rowsUpdated == 0) {
             throw new InternalServerException("Не удалось обновить данные фильма");
         }
-        // 2. Обновление жанров и лайков в одном вызове
         updateFilmRelations(film);
         return film;
     }
@@ -174,11 +166,10 @@ public class JdbcFilmRepository implements FilmStorage {
     private void updateFilmRelations(Film film) {
         Long filmId = film.getId();
 
-        // 1. Подготовка данных для batch-операций
+
         List<MapSqlParameterSource> genreBatchParams = film.getGenres().stream().map(genre -> new MapSqlParameterSource().addValue("film_id", filmId).addValue("genre_id", genre.getId())).toList();
 
         List<MapSqlParameterSource> likesBatchParams = film.getLikedUserIds().stream().map(userId -> new MapSqlParameterSource().addValue("film_id", filmId).addValue("user_id", userId)).toList();
-        // 2. Выполнение в одной транзакции
         jdbc.batchUpdate(DELETE_OLD_FILM_GENRES, new MapSqlParameterSource[]{new MapSqlParameterSource("film_id", filmId)});
 
         if (!genreBatchParams.isEmpty()) {

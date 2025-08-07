@@ -31,9 +31,4 @@ public class MpaController {
         return mpaService.getMpaRatingById(id);
     }
 
-//    // Метод для изоляции тестов (аналогично FilmController)
-//    @DeleteMapping("/reset")
-//    public void reset() {
-//        mpaService.deleteAllMpaRatings();
-//    }
 }

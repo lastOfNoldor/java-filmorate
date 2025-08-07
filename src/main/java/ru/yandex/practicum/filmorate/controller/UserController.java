@@ -90,7 +90,6 @@ public class UserController {
         }
     }
 
-    // метод для изоляции тестов, чтобы каждый тест в UserControllerTest не зависил от предыдущего
     @DeleteMapping("/reset")
     public void reset() {
         userService.deleteAll();

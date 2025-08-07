@@ -8,10 +8,9 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(of = "id")
 public class FilmGenre {
-    //    COMEDY, DRAMA, CARTOON, THRILLER, DOCUMENTAL, ACTION
     @NotNull
-    Integer id;
+    private Integer id;
     @NotBlank
     @NotNull
-    String name;
+    private String name;
 }

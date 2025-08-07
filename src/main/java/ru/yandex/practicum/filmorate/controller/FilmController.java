@@ -91,7 +91,6 @@ public class FilmController {
         }
     }
 
-    // метод для изоляции тестов, чтобы каждый тест в UserControllerTest не зависил от предыдущего
     @DeleteMapping("/reset")
     public void reset() {
         filmService.deleteAll();

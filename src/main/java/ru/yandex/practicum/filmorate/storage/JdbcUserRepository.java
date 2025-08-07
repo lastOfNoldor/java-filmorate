@@ -30,6 +30,7 @@ public class JdbcUserRepository implements UserStorage {
             FROM users u
             JOIN friendships f ON u.id = f.friend_id
             WHERE f.user_id = :user_id""";
+    private static final String DELETE_ALL_USERS = "DELETE FROM users";
     protected final NamedParameterJdbcOperations jdbc;
     protected final UserRowMapper mapper = new UserRowMapper();
 
@@ -97,6 +98,7 @@ public class JdbcUserRepository implements UserStorage {
 
     @Override
     public boolean deleteAll() {
-        return true;
+        int affectedRows = jdbc.update(DELETE_ALL_USERS, Collections.emptyMap());
+        return affectedRows > 0;
     }
 }

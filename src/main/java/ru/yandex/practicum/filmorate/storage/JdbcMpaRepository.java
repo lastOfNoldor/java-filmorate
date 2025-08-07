@@ -33,7 +33,5 @@ public class JdbcMpaRepository implements MpaRepository {
         return List.copyOf(jdbc.query(GET_ALL_MPA, Collections.emptyMap(), mapper));
     }
 
-//    public void deleteAll() {
-//        return;
-//    }
+
 }

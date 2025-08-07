@@ -135,8 +135,9 @@ public class UserService {
         users.deleteAll();
     }
 
-    public void clearCredentialsSets() { //метод для тестов
+    public void clearCredentialsSets() {
         emailSet.clear();
         loginSet.clear();
+        deleteAll();
     }
 }

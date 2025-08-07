@@ -10,8 +10,8 @@ import lombok.EqualsAndHashCode;
 public class MPARate {
     //    G, PG, PG13, R, NC17
     @NotNull
-    Integer id;
+    private Integer id;
     @NotBlank
     @NotNull
-    String name;
+    private String name;
 }
