@@ -15,7 +15,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 // CHECKSTYLE:OFF
 @SpringBootTest(classes = FilmorateApplication.class)
-@JdbcTest
 @AutoConfigureMockMvc
 public class FilmControllerTest {
     private final String validTestFilm = """
