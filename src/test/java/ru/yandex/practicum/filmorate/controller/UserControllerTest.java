@@ -29,10 +29,6 @@ class UserControllerTest {
               "birthday": "1990-01-01"
             }
             """;
-//
-//    private void createValidUser(String userJson) throws Exception {
-//        mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isCreated());
-//    }
 
     private long createValidUser(String userJson) throws Exception {
         MvcResult result = mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isCreated()).andReturn();

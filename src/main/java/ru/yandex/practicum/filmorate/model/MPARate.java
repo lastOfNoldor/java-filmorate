@@ -8,7 +8,6 @@ import lombok.EqualsAndHashCode;
 @Data
 @EqualsAndHashCode(of = "id")
 public class MPARate {
-    //    G, PG, PG13, R, NC17
     @NotNull
     private Integer id;
     @NotBlank
