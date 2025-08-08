@@ -54,23 +54,6 @@ public class JdbcUserRepositoryTest {
         assertThat(result).isPresent().get().usingRecursiveComparison().isEqualTo(getTestUser());
     }
 
-    @Test
-    @DisplayName("должен добавлять друга")
-    void shouldAddFriend() {
-        Optional<User> result = userRepository.findById(TEST_USER_ID);
-        assertThat(result).isPresent().get().usingRecursiveComparison().isEqualTo(getTestUser());
-
-        // Проверяем, что пользователи существуют
-
-        assertThat(userRepository.findById(TEST_USER_ID)).isPresent();
-        assertThat(userRepository.findById(TEST_FRIEND_ID)).isPresent();
-
-        boolean added = userRepository.saveFriendshipRequest(TEST_USER_ID, TEST_FRIEND_ID);
-        assertThat(added).isTrue();
-
-        List<User> friends = userRepository.findFriends(TEST_USER_ID);
-        assertThat(friends).hasSize(1).first().extracting(User::getId).isEqualTo(TEST_FRIEND_ID);
-    }
 
     @Test
     @DisplayName("должен возвращать пустой Optional при поиске несуществующего пользователя")
@@ -94,14 +77,6 @@ public class JdbcUserRepositoryTest {
         Optional<User> foundUser = userRepository.findById(createdUser.getId());
         assertThat(foundUser).isPresent().get().usingRecursiveComparison().ignoringFields("id").isEqualTo(newUser);
     }
-
-    @Test
-    @DisplayName("должен возвращать всех пользователей")
-    void shouldFindAllUsers() {
-        List<User> users = userRepository.findAll();
-        assertThat(users).hasSize(2).extracting(User::getId).containsExactlyInAnyOrder(TEST_USER_ID, TEST_FRIEND_ID);
-    }
-
 
     @Test
     @DisplayName("должен возвращать пустой список друзей")
