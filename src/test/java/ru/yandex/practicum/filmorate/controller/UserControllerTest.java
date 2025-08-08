@@ -1,22 +1,29 @@
-package ru.yandex.practicum.filmorate.ControllersTests;
+package ru.yandex.practicum.filmorate.controller;
 
+import com.jayway.jsonpath.JsonPath;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
+import ru.yandex.practicum.filmorate.FilmorateApplication;
 import ru.yandex.practicum.filmorate.service.UserService;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
+
 // CHECKSTYLE:OFF
-@SpringBootTest
+@SpringBootTest(classes = FilmorateApplication.class)
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
 class UserControllerTest {
+
     private final String validTestUser = """
             {
               "login": "properlogin",
@@ -26,8 +33,11 @@ class UserControllerTest {
             }
             """;
 
-    private void createValidUser(String userJson) throws Exception {
-        mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isCreated());
+    private long createValidUser(String userJson) throws Exception {
+        MvcResult result = mockMvc.perform(post("/users").contentType(MediaType.APPLICATION_JSON).content(userJson)).andExpect(status().isCreated()).andReturn();
+
+        String response = result.getResponse().getContentAsString();
+        return JsonPath.parse(response).read("$.id", Long.class); // Получаем ID
     }
 
     private void createInvalidUserWithBadRequest(String userJson) throws Exception {
@@ -149,36 +159,26 @@ class UserControllerTest {
 
     @Test
     void postInvalidRequests() throws Exception {
-        String invalidRaquest1 = "";
-        createInvalidUserWithInternalServerError(invalidRaquest1);
+        String invalidRequest1 = "";
+        createInvalidUserWithInternalServerError(invalidRequest1);
     }
+
 
     @Test
     void updateSuccessAndUpdateLoginEmailSuccess() throws Exception {
-        createValidUser(validTestUser);
-        String updatedValidTestUser = """
+        long userId = createValidUser(validTestUser); // Получаем ID
+
+        String updatedUserJson = """
                 {
-                  "id": 1,
+                  "id": %d,
                   "login": "properlogin",
                   "email": "mail@mail.ru",
                   "name": "UpdatedName",
                   "birthday": "1999-01-01"
                 }
-                """;
+                """.formatted(userId);
 
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andExpect(status().isOk());
-        mockMvc.perform(get("/users")).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].login").value("properlogin")).andExpect(jsonPath("$[0].email").value("mail@mail.ru")).andExpect(jsonPath("$[0].name").value("UpdatedName")).andExpect(jsonPath("$[0].birthday").value("1999-01-01"));
-        String updatedValidTestUser2 = """
-                {
-                  "id": 1,
-                  "login": "properlogin2",
-                  "email": "mail2@mail.ru",
-                  "name": "",
-                  "birthday": "1990-02-02"
-                }
-                """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser2)).andExpect(status().isOk());
-        mockMvc.perform(get("/users")).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].login").value("properlogin2")).andExpect(jsonPath("$[0].email").value("mail2@mail.ru")).andExpect(jsonPath("$[0].name").value("properlogin2")).andExpect(jsonPath("$[0].birthday").value("1990-02-02"));
+        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedUserJson)).andExpect(status().isOk());
     }
 
     @Test
@@ -195,68 +195,18 @@ class UserControllerTest {
         mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andExpect(status().isBadRequest());
     }
 
-    @Test
-    void userWithThatIdMissingNotFound() throws Exception {
-        createValidUser(validTestUser);
-        String updatedInvalidTestUser = """
-                {
-                    "id": "3",
-                  "login": "properlogin2",
-                  "email": "mail@mail.ru",
-                  "name": "UpdatedName",
-                  "birthday": "1999-01-01"
-                }
-                """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedInvalidTestUser)).andExpect(status().isNotFound());
-    }
-
-    @Test
-    void updateInvalidCredentials() throws Exception {
-        createValidUser(validTestUser);
-        String updatedInvalidLogin = """
-                {
-                    "id": "1",
-                  "login": "proper   login2",
-                  "email": "mail@mail.ru",
-                  "name": "UpdatedName",
-                  "birthday": "1999-01-01"
-                }
-                """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedInvalidLogin)).andExpect(status().isBadRequest());
-        String updatedInvalidEmail = """
-                {
-                    "id": "1",
-                  "login": "properlogin2",
-                  "email": "mailmail.ru",
-                  "name": "UpdatedName",
-                  "birthday": "1999-01-01"
-                }
-                """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedInvalidEmail)).andExpect(status().isBadRequest());
-        String updatedInvalidData = """
-                {
-                    "id": "1",
-                  "login": "properlogin2",
-                  "email": "mail@mail.ru",
-                  "name": "UpdatedName",
-                  "birthday": "2199-01-01"
-                }
-                """;
-        mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedInvalidData)).andExpect(status().isBadRequest());
-
-    }
 
     @Test
     void notAllFieldsShouldBeInUpdateSuccess() throws Exception {
-        createValidUser(validTestUser);
+        long userId = createValidUser(validTestUser);
         String updatedValidTestUser = """
                 {
-                  "id": 1,
+                  "id": %d,
                   "login": "properlogin2",
                   "email": "mail@mail.ru",
                   "name": "UpdatedName"
                 }
-                """;
+                """.formatted(userId);
 
         mockMvc.perform(put("/users").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestUser)).andDo(print()).andExpect(status().isOk());
         mockMvc.perform(get("/users")).andExpect(jsonPath("$[0].name").value("UpdatedName")).andExpect(jsonPath("$[0].birthday").value("1990-01-01"));

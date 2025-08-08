@@ -15,5 +15,5 @@ public interface FilmStorage {
 
     Optional<Film> findById(Long id);
 
-    void deleteAll(); // Для тестирования
+    boolean deleteAll();
 }

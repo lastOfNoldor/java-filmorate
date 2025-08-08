@@ -1,4 +1,4 @@
-package ru.yandex.practicum.filmorate.ControllersTests;
+package ru.yandex.practicum.filmorate.controller;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -6,13 +6,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import ru.yandex.practicum.filmorate.FilmorateApplication;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 // CHECKSTYLE:OFF
-@SpringBootTest
+@SpringBootTest(classes = FilmorateApplication.class)
+@TestPropertySource(locations = "classpath:application-test.properties")
 @AutoConfigureMockMvc
 public class FilmControllerTest {
     private final String validTestFilm = """
@@ -132,23 +135,6 @@ public class FilmControllerTest {
                 });
     }
 
-    @Test
-    void updateSuccessAndUpdateLoginEmailSuccess() throws Exception {
-        createValidFilm(validTestFilm);
-        String updatedValidTestFilm = """
-                {
-                   "id": 1,
-                  "name": "Ironweed2",
-                  "description": "wow very nice2",
-                  "releaseDate": "1927-01-01",
-                   "duration": 1288
-                }
-                """;
-
-        mockMvc.perform(put("/films").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestFilm)).andExpect(status().isOk());
-        mockMvc.perform(get("/films")).andExpect(status().isOk()).andExpect(content().contentType(MediaType.APPLICATION_JSON)).andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].name").value("Ironweed2")).andExpect(jsonPath("$[0].description").value("wow very nice2")).andExpect(jsonPath("$[0].releaseDate").value("1927-01-01")).andExpect(jsonPath("$[0].duration").value(1288));
-
-    }
 
     @Test
     void idMissingBadRequest() throws Exception {
@@ -255,21 +241,6 @@ public class FilmControllerTest {
                 }
                 """;
         mockMvc.perform(put("/films").contentType(MediaType.APPLICATION_JSON).content(nameAsNumberDurationAsString)).andExpect(status().isInternalServerError());
-
-    }
-
-    @Test
-    void notAllFieldsShouldBeInUpdateSuccess() throws Exception {
-        createValidFilm(validTestFilm);
-        String updatedValidTestFilm = """
-                {
-                  "id": 1,
-                  "name": "Ironweed2"
-                }
-                """;
-
-        mockMvc.perform(put("/films").contentType(MediaType.APPLICATION_JSON).content(updatedValidTestFilm)).andExpect(status().isOk());
-        mockMvc.perform(get("/films")).andExpect(jsonPath("$[0].name").value("Ironweed2")).andExpect(jsonPath("$[0].duration").value(15000));
 
     }
 

@@ -6,21 +6,20 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.FilmGenre;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.JdbcFilmRepository;
+import ru.yandex.practicum.filmorate.storage.JdbcUserRepository;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class FilmService {
 
-    private final FilmStorage films;
-    private final UserStorage users;
+    private final JdbcFilmRepository films;
+    private final JdbcUserRepository users;
 
     public List<Film> findAll() {
         return films.findAll();
@@ -28,11 +27,7 @@ public class FilmService {
 
     public Film findById(Long id) {
         log.info("Выполнение запроса поиска фильма с id: {} в хранилище", id);
-        Optional<Film> byId = films.findById(id);
-        if (byId.isEmpty()) {
-            throw new NotFoundException("Фильм не найден");
-        }
-        return byId.get();
+        return films.findById(id).orElseThrow(() -> new NotFoundException("Фильм не найден"));
     }
 
     public Film update(Film newFilm) {
@@ -40,19 +35,50 @@ public class FilmService {
             log.error("В запросе отсутствует ID фильма");
             throw new ValidationException("ID фильма не указан");
         }
-        Optional<Film> byId = films.findById(newFilm.getId());
-        if (byId.isEmpty()) {
-            log.error("Не найден фильм для обновления, ID: {}", newFilm.getId());
-            throw new NotFoundException("Фильм не найден");
-        }
-        Film oldFilm = byId.get();
+        Film oldFilm = films.findById(newFilm.getId()).orElseThrow(() -> new NotFoundException("Фильм не найден"));
+//        checkMpa(oldFilm);
+        checkGenres(oldFilm);
         oldFilm.setName(newFilm.getName());
         Optional.ofNullable(newFilm.getDescription()).ifPresent(oldFilm::setDescription);
+        Optional.ofNullable(newFilm.getGenres()).ifPresent(oldFilm::setGenres);
+        Optional.ofNullable(newFilm.getMpa()).ifPresent(oldFilm::setMpa);
         Optional.ofNullable(newFilm.getReleaseDate()).ifPresent(oldFilm::setReleaseDate);
         Optional.ofNullable(newFilm.getDuration()).ifPresent(oldFilm::setDuration);
-        log.info("Данные фильма успешно обновлены. ID: {}", newFilm.getId());
-        return films.update(oldFilm);
+        Film result = films.update(oldFilm);
+        log.info("Данные фильма успешно обновлены. ID: {}", result.getId());
+        return result;
     }
+
+    public Film create(Film createdFilm) {
+        if (createdFilm.getId() != null) {
+            log.error("В запросе на создание присутствует ID фильма");
+            throw new ValidationException("Фильм с id: " + createdFilm.getId() + " уже существует");
+        }
+        checkGenres(createdFilm);
+        if (createdFilm.getLikedUserIds() == null) {
+            createdFilm.setLikedUserIds(Collections.emptySet());
+        }
+        return films.create(createdFilm);
+    }
+
+
+    private void checkGenres(Film film) {
+        if (film.getGenres() != null) {
+            Set<FilmGenre> filmGenres = film.getGenres();
+            Set<FilmGenre> genres = films.getAllGenres();
+            if (!genres.containsAll(filmGenres)) {
+                throw new NotFoundException("Жанр фильма не найден в БД");
+            }
+            if (film.getGenres() != null) {
+                List<FilmGenre> sorted = new ArrayList<>(film.getGenres());
+                sorted.sort(Comparator.comparingLong(FilmGenre::getId));
+                film.setGenres(new LinkedHashSet<>(sorted));
+            }
+        } else {
+            film.setGenres(Collections.emptySet());
+        }
+    }
+
 
     public int addLike(Long filmId, Long userId) {
         Film film = films.findById(filmId).orElseThrow(() -> new NotFoundException("Фильм с id: " + filmId + " не найден."));
@@ -67,7 +93,7 @@ public class FilmService {
     }
 
     public int removeLike(Long filmId, Long userId) {
-        Film film = films.findById(filmId).orElseThrow(() -> new NotFoundException("Фильм с id: " + filmId + " не найден."));
+        Film film = getFilmOrThrow(filmId);
         User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден."));
         if (film.getLikedUserIds().contains(userId)) {
             film.setLikesCount(film.getLikesCount() - 1);
@@ -77,12 +103,8 @@ public class FilmService {
         return film.getLikesCount();
     }
 
-    public Film create(Film createdFilm) {
-        if (createdFilm.getId() != null) {
-            log.error("В запросе на создание присутствует ID фильма");
-            throw new ValidationException("Фильм с id: " + createdFilm.getId() + " уже существует");
-        }
-        return films.create(createdFilm);
+    private Film getFilmOrThrow(Long id) {
+        return films.findById(id).orElseThrow(() -> new NotFoundException("Фильм с id: " + id + " не найден"));
     }
 
     public void deleteAll() {

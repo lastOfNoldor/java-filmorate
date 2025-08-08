@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.JdbcUserRepository;
 
 import java.util.*;
 
@@ -16,7 +16,7 @@ import java.util.*;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-    private final UserStorage users;
+    private final JdbcUserRepository users;
     private final Set<String> emailSet = new HashSet<>();
     private final Set<String> loginSet = new HashSet<>();
 
@@ -26,41 +26,35 @@ public class UserService {
         users.findAll().forEach(user -> loginSet.add(user.getLogin()));
     }
 
-
     public User addFriend(Long userId, Long friendId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendIds().contains(friendId)) {
-            throw new ValidationException("Пользователи уже являются друзьями");
+        getUserOrThrow(userId);
+        User friend = getUserOrThrow(friendId);
+        if (!users.saveFriendshipRequest(userId, friendId)) {
+            throw new ValidationException("Запрос уже существует");
         }
-        user.getFriendIds().add(friendId);
-        friend.getFriendIds().add(userId);
-        users.update(user);
-        users.update(friend);
-        return user;
+        return friend;
+    }
+
+    private User getUserOrThrow(Long id) {
+        return users.findById(id).orElseThrow(() -> new NotFoundException("Пользователь с id: " + id + " не найден"));
     }
 
     public User deleteFriend(Long userId, Long friendId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        User friend = users.findById(friendId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + friendId + " не найден"));
-        if (user.getFriendIds().contains(friendId)) {
-            user.getFriendIds().remove(friendId);
-            friend.getFriendIds().remove(userId);
-            users.update(user);
-            users.update(friend);
-        }
+        User user = getUserOrThrow(userId);
+        getUserOrThrow(friendId);
+        users.deleteFriendshipRequest(userId, friendId);
         return user;
     }
 
     public List<User> getFriends(Long userId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        return user.getFriendIds().stream().map(users::findById).flatMap(Optional::stream).toList();
+        getUserOrThrow(userId);
+        return List.copyOf(users.findFriends(userId));
     }
 
     public List<User> getCommonFriends(Long userId, Long otherId) {
-        User user = users.findById(userId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + userId + " не найден"));
-        User other = users.findById(otherId).orElseThrow(() -> new NotFoundException("Пользователь с id: " + otherId + " не найден"));
-        return user.getFriendIds().stream().filter(other.getFriendIds()::contains).map(users::findById).flatMap(Optional::stream).toList();
+        getUserOrThrow(userId);
+        getUserOrThrow(otherId);
+        return List.copyOf(users.findFriends(userId).stream().filter(users.findFriends(otherId)::contains).toList());
     }
 
 
@@ -87,9 +81,11 @@ public class UserService {
         }
         emailAlreadyExists(createdUser.getEmail());
         loginAlreadyExists(createdUser.getLogin());
+        User result = users.create(createdUser);
+        log.info("Успешное создание пользователя: {}. ID: {}", result.getLogin(), result.getId());
         emailSet.add(createdUser.getEmail());
         loginSet.add(createdUser.getLogin());
-        return users.create(createdUser);
+        return result;
     }
 
     public User update(@Valid User newUser) {
@@ -99,7 +95,7 @@ public class UserService {
         }
         Optional<User> byId = users.findById(newUser.getId());
         if (byId.isEmpty()) {
-            log.error("Не найден фильм для обновления, ID: {}", newUser.getId());
+            log.error("Не найден пользователь для обновления, ID: {}", newUser.getId());
             throw new NotFoundException("Пользователь не найден");
         }
         User oldUser = byId.get();
@@ -135,12 +131,13 @@ public class UserService {
         }
     }
 
-    public void deleteAll() {
+    public void deleteAll() {   //метод для тестов
         users.deleteAll();
     }
 
     public void clearCredentialsSets() {
         emailSet.clear();
         loginSet.clear();
+        deleteAll();
     }
 }
