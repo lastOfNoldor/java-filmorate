@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.test.context.TestPropertySource;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.JdbcUserRepository;
 
@@ -19,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @JdbcTest
 @Import(JdbcUserRepository.class)
 @RequiredArgsConstructor(onConstructor_ = @Autowired)
+@TestPropertySource(locations = "classpath:application-test.properties")
 @DisplayName("JdbcUserRepository")
 public class JdbcUserRepositoryTest {
     private static final long TEST_USER_ID = 1L;
